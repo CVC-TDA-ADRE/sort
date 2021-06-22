@@ -44,23 +44,28 @@ class Sort_Tracking(Node):
             parameters=[
                 ('topic_in', 'image'),
                 ('topic_out', 'detections'),
+                ('queue_pub', 10),
+                ('queue_sub', 10),
             ]
         )
 
         # get parameters
         topic_in = self.get_parameter('topic_in').get_parameter_value().string_value
         topic_out = self.get_parameter('topic_out').get_parameter_value().string_value
+        queue_pub = self.get_parameter('queue_pub').get_parameter_value().integer_value
+        queue_sub = self.get_parameter('queue_sub').get_parameter_value().integer_value
 
         # create subscriber
-        self.subscription = self.create_subscription(Detections2DArray, topic_in, self.listener_callback, 5)
+        self.subscription = self.create_subscription(Detections2DArray, topic_in, self.listener_callback, queue_sub)
         self.subscription  # prevent unused variable warning
         self.get_logger().info('Listening to %s topic' % topic_in)
 
         # create publisher
-        self.publisher_ = self.create_publisher(Detections2DArray, topic_out, 5)
+        self.publisher_ = self.create_publisher(Detections2DArray, topic_out, queue_pub)
 
         # initialize variables
         self.last_time = time.time()
+        self.last_update = self.last_time
 
         # Detector initialization
         self.model = self._init_model()
@@ -90,7 +95,9 @@ class Sort_Tracking(Node):
         curr_time = time.time()
         fps = 1 / (curr_time - self.last_time)
         self.last_time = curr_time
-        self.get_logger().info('Computing tracking at %.01f fps' % fps)
+        if (curr_time - self.last_update) > 5.:
+            self.last_update = curr_time
+            self.get_logger().info('Computing tracking at %.01f fps' % fps)
 
     def _init_model(self):
         model = Sort() 
