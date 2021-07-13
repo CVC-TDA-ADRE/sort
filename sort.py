@@ -228,25 +228,31 @@ class Sort(object):
     matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets,trks, self.iou_threshold)
 
     # update matched trackers with assigned detections
+    dets_id = list(np.zeros(len(self.trackers)))
     for m in matched:
       self.trackers[m[1]].update(dets[m[0], :])
+      dets_id[m[1]] = m[0]
 
     # create and initialise new trackers for unmatched detections
     for i in unmatched_dets:
         trk = KalmanBoxTracker(dets[i,:])
         self.trackers.append(trk)
+        dets_id.append(i)
     i = len(self.trackers)
+
+    dets_id_ret = []
     for trk in reversed(self.trackers):
         d = trk.get_state()[0]
         if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
           ret.append(np.concatenate((d,[trk.id+1])).reshape(1,-1)) # +1 as MOT benchmark requires positive
+          dets_id_ret.append(dets_id[i-1])
         i -= 1
         # remove dead tracklet
         if(trk.time_since_update > self.max_age):
           self.trackers.pop(i)
     if(len(ret)>0):
-      return np.concatenate(ret)
-    return np.empty((0,5))
+      return np.concatenate(ret), dets_id_ret
+    return np.empty((0,5)), dets_id_ret
 
 def parse_args():
     """Parse input arguments."""
@@ -256,11 +262,11 @@ def parse_args():
     parser.add_argument("--phase", help="Subdirectory in seq_path.", type=str, default='train')
     parser.add_argument("--max_age", 
                         help="Maximum number of frames to keep alive a track without associated detections.", 
-                        type=int, default=1)
+                        type=int, default=3)
     parser.add_argument("--min_hits", 
                         help="Minimum number of associated detections before track is initialised.", 
-                        type=int, default=3)
-    parser.add_argument("--iou_threshold", help="Minimum IOU for match.", type=float, default=0.3)
+                        type=int, default=0)
+    parser.add_argument("--iou_threshold", help="Minimum IOU for match.", type=float, default=0.1)
     args = parser.parse_args()
     return args
 

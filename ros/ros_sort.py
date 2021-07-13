@@ -77,12 +77,12 @@ class Sort_Tracking(Node):
 
         if len(detections)>0:
             # segment image
-            track_bbs_ids = self.model.update(detections)
+            track_bbs_ids, matched_ids = self.model.update(detections)
 
             # publish results
             if len(track_bbs_ids)>0 and len(track_bbs_ids)==len(detections):
                 # iou_matrix = iou_batch(detections, trackers)
-                tracked_msg = self._create_bbox_message(msg, track_bbs_ids)
+                tracked_msg = self._create_bbox_message(msg, track_bbs_ids, matched_ids)
             else:
                 tracked_msg = Detections2DArray()
         else:
@@ -100,21 +100,21 @@ class Sort_Tracking(Node):
             self.get_logger().info('Computing tracking at %.01f fps' % fps)
 
     def _init_model(self):
-        model = Sort() 
+        model = Sort(max_age=3, min_hits=0, iou_threshold=0.5) 
 
         return model
 
-    def _create_bbox_message(self, msg, tracking_ids):
-        for obj_indx in range(len(msg.detections)):
-        	msg.detections[obj_indx].instance = int(tracking_ids[obj_indx][4])
+    def _create_bbox_message(self, msg, tracking_ids, matched_ids):
+        for obj_indx in range(len(matched_ids)):
+            msg.detections[matched_ids[obj_indx]].instance = int(tracking_ids[obj_indx][4])
         return msg
 
     def _msg2detections(self, msg):
         detections = []
         for obj_indx in range(len(msg.detections)):
-        	detection = msg.detections[obj_indx]
-        	bbox = np.asarray([detection.center_x - detection.size_x/2., detection.center_y - detection.size_y/2., detection.center_x + detection.size_x/2., detection.center_y + detection.size_y/2.])
-        	detections.append(bbox)
+            detection = msg.detections[obj_indx]
+            bbox = np.asarray([detection.center_x - detection.size_x/2., detection.center_y - detection.size_y/2., detection.center_x + detection.size_x/2., detection.center_y + detection.size_y/2.])
+            detections.append(bbox)
         return np.asarray(detections)
 
 

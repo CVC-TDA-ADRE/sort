@@ -1,9 +1,11 @@
-FROM nvidia/cuda:10.1-cudnn7-devel
+ARG IMAGE_BASE
+
+FROM ${IMAGE_BASE}
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y \
         python3-opencv ca-certificates python3-dev git wget sudo
-RUN ln -sv /usr/bin/python3 /usr/bin/python
+# RUN ln -sv /usr/bin/python3 /usr/bin/python
 
 WORKDIR /code
 RUN wget https://bootstrap.pypa.io/get-pip.py && \
