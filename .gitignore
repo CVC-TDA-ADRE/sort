@@ -1,3 +1,5 @@
 output/
 mot_benchmark
 *__pycache__*
+.ipynb_checkpoints
+*.ipynb
